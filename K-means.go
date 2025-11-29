@@ -2,8 +2,14 @@ package K_means
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"math/rand"
+
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/plotutil"
+	"gonum.org/v1/plot/vg"
 )
 
 // KMeans представляет кластеризатор K-средних
@@ -199,4 +205,97 @@ func (km *KMeans) PrintClusterInfo(X [][]float64) {
 
 	inertia := km.Inertia(X)
 	fmt.Printf("\nИнерция (WCSS): %.4f\n", inertia)
+}
+
+// PlotClusters создает график кластеризации с отмеченными центроидами
+// filename - имя файла для сохранения графика (например, "clusters.png")
+// Для многомерных данных (>2 измерений) используются только первые 2 измерения
+func (km *KMeans) PlotClusters(X [][]float64, filename string) error {
+	if len(X) == 0 {
+		return fmt.Errorf("нет данных для визуализации")
+	}
+
+	if km.FeatureDim < 2 {
+		return fmt.Errorf("для визуализации необходимо минимум 2 измерения")
+	}
+
+	// Создаем новый график
+	p := plot.New()
+	p.Title.Text = "K-means кластеризация"
+	p.X.Label.Text = "X"
+	p.Y.Label.Text = "Y"
+
+	// Цвета для кластеров (RGBA с нормализованными значениями 0-1)
+	plotColors := []color.Color{
+		color.RGBA{R: 255, G: 0, B: 0, A: 255},     // Красный
+		color.RGBA{R: 0, G: 0, B: 255, A: 255},     // Синий
+		color.RGBA{R: 0, G: 255, B: 0, A: 255},     // Зеленый
+		color.RGBA{R: 255, G: 165, B: 0, A: 255},   // Оранжевый
+		color.RGBA{R: 128, G: 0, B: 128, A: 255},   // Фиолетовый
+		color.RGBA{R: 139, G: 69, B: 19, A: 255},   // Коричневый
+		color.RGBA{R: 255, G: 192, B: 203, A: 255}, // Розовый
+		color.RGBA{R: 128, G: 128, B: 128, A: 255}, // Серый
+	}
+
+	// Рисуем точки для каждого кластера
+	for k := 0; k < km.K; k++ {
+		points := make(plotter.XYs, 0)
+		for i, x := range X {
+			if km.Labels[i] == k {
+				points = append(points, plotter.XY{
+					X: x[0],
+					Y: x[1],
+				})
+			}
+		}
+
+		if len(points) > 0 {
+			scatter, err := plotter.NewScatter(points)
+			if err != nil {
+				return fmt.Errorf("ошибка создания scatter для кластера %d: %v", k, err)
+			}
+
+			// Используем цвет из палитры или черный по умолчанию
+			if k < len(plotColors) {
+				scatter.GlyphStyle.Color = plotColors[k]
+			} else {
+				scatter.GlyphStyle.Color = color.Black
+			}
+			scatter.GlyphStyle.Radius = vg.Points(3)
+			scatter.Shape = plotutil.Shape(k % 4) // Разные формы для разных кластеров
+
+			p.Add(scatter)
+			p.Legend.Add(fmt.Sprintf("Кластер %d", k), scatter)
+		}
+	}
+
+	// Рисуем центроиды специальными маркерами (звездочки)
+	centroidPoints := make(plotter.XYs, km.K)
+	for k := 0; k < km.K; k++ {
+		centroidPoints[k] = plotter.XY{
+			X: km.Centroids[k][0],
+			Y: km.Centroids[k][1],
+		}
+	}
+
+	centroidScatter, err := plotter.NewScatter(centroidPoints)
+	if err != nil {
+		return fmt.Errorf("ошибка создания scatter для центроидов: %v", err)
+	}
+
+	// Центроиды отображаем черными звездочками большего размера
+	centroidScatter.GlyphStyle.Color = color.Black
+	centroidScatter.GlyphStyle.Radius = vg.Points(8)
+	centroidScatter.Shape = plotutil.Shape(4) // Звездочка
+
+	p.Add(centroidScatter)
+	p.Legend.Add("Центроиды", centroidScatter)
+
+	// Сохраняем график в файл
+	if err := p.Save(8*vg.Inch, 8*vg.Inch, filename); err != nil {
+		return fmt.Errorf("ошибка сохранения графика: %v", err)
+	}
+
+	fmt.Printf("\nГрафик сохранен в файл: %s\n", filename)
+	return nil
 }
