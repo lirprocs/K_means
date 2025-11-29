@@ -6,30 +6,24 @@ import (
 	"math/rand"
 )
 
-// Константы для обучения K-means
-const (
-	// KMeansK - количество кластеров
-	KMeansK = 3
-	// KMeansMaxIterations - максимальное количество итераций
-	KMeansMaxIterations = 100
-	// KMeansTolerance - допуск для сходимости
-	KMeansTolerance = 1e-4
-)
-
 // KMeans представляет кластеризатор K-средних
 type KMeans struct {
-	K          int
-	Centroids  [][]float64
-	Labels     []int
-	FeatureDim int
+	K                   int
+	Centroids           [][]float64
+	Labels              []int
+	FeatureDim          int
+	KMeansMaxIterations int
+	KMeansTolerance     float64
 }
 
 // NewKMeans создает новый кластеризатор K-средних
-func NewKMeans(k int, featureDim int) *KMeans {
+func NewKMeans(k int, featureDim int, KMeansMaxIterations int, KMeansTolerance float64) *KMeans {
 	return &KMeans{
-		K:          k,
-		Centroids:  make([][]float64, k),
-		FeatureDim: featureDim,
+		K:                   k,
+		Centroids:           make([][]float64, k),
+		FeatureDim:          featureDim,
+		KMeansMaxIterations: KMeansMaxIterations,
+		KMeansTolerance:     KMeansTolerance,
 	}
 }
 
@@ -109,7 +103,7 @@ func (km *KMeans) Fit(X [][]float64) {
 	km.InitializeCentroids(X)
 	km.Labels = make([]int, len(X))
 
-	for iteration := 0; iteration < KMeansMaxIterations; iteration++ {
+	for iteration := 0; iteration < km.KMeansMaxIterations; iteration++ {
 		// Шаг 1: Назначаем точки ближайшим центроидам
 		changed := false
 		for i, x := range X {
@@ -154,7 +148,7 @@ func (km *KMeans) Fit(X [][]float64) {
 			}
 		}
 
-		if !changed || maxCentroidShift < KMeansTolerance {
+		if !changed || maxCentroidShift < km.KMeansTolerance {
 			fmt.Printf("K-means сошелся на итерации %d (максимальное смещение центроида: %.6f)\n", iteration, maxCentroidShift)
 			break
 		}
