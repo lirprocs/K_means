@@ -210,6 +210,8 @@ func (km *KMeans) PrintClusterInfo(X [][]float64) {
 // PlotClusters создает график кластеризации с отмеченными центроидами
 // filename - имя файла для сохранения графика (например, "clusters.png")
 // Для многомерных данных (>2 измерений) используются только первые 2 измерения
+// Функцию можно вызывать как до обучения (покажет начальные центроиды),
+// так и после обучения (покажет финальные центроиды и кластеры)
 func (km *KMeans) PlotClusters(X [][]float64, filename string) error {
 	if len(X) == 0 {
 		return fmt.Errorf("нет данных для визуализации")
@@ -237,11 +239,25 @@ func (km *KMeans) PlotClusters(X [][]float64, filename string) error {
 		color.RGBA{R: 128, G: 128, B: 128, A: 255}, // Серый
 	}
 
+	// Определяем принадлежность точек к кластерам
+	// Если Labels уже есть (после обучения), используем их
+	// Иначе вычисляем на основе ближайших центроидов
+	labels := make([]int, len(X))
+	if len(km.Labels) == len(X) {
+		// Используем существующие Labels
+		copy(labels, km.Labels)
+	} else {
+		// Вычисляем принадлежность на основе ближайших центроидов
+		for i, x := range X {
+			labels[i] = km.FindClosestCentroid(x)
+		}
+	}
+
 	// Рисуем точки для каждого кластера
 	for k := 0; k < km.K; k++ {
 		points := make(plotter.XYs, 0)
 		for i, x := range X {
-			if km.Labels[i] == k {
+			if labels[i] == k {
 				points = append(points, plotter.XY{
 					X: x[0],
 					Y: x[1],
