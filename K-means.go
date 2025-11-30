@@ -223,7 +223,12 @@ func (km *KMeans) PlotClusters(X [][]float64, filename string) error {
 
 	// Создаем новый график
 	p := plot.New()
-	p.Title.Text = "K-means кластеризация"
+	// Определяем, обучена ли модель (есть ли Labels)
+	if len(km.Labels) == len(X) {
+		p.Title.Text = "K-means кластеризация (после обучения)"
+	} else {
+		p.Title.Text = "K-means кластеризация (до обучения - начальные центроиды)"
+	}
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
 
